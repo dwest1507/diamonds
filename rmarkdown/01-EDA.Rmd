@@ -1,0 +1,46 @@
+---
+title: "01-EDA"
+author: "David West"
+date: "9/12/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+# Introduction
+The purpose of this file is to do some initial exploratory analysis of the diamonds data set. This data set is provided in the ggplot2 package.
+
+# EDA
+## First Look
+A sample, summary, and first glimpse of the diamonds data set is provided below:
+```{r}
+# Saving the diamonds data as an object: data
+data <- ggplot2::diamonds
+
+# Showing a sample
+head(data)
+
+# Showing a statistical summary
+summary(data)
+
+# Showing the structure of the data
+glimpse(data)
+```
+There are `r nrow(data)` rows of data. Each row is one observation / one diamond. There are `r ncol(data)` columns of data. Each column is a variable / feature. The features are:
+```{r}
+# Showing column names
+names(data)
+```
+
+
+
+# Conclusion
+
