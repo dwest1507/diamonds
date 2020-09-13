@@ -13,6 +13,22 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+
+data <- ggplot2::diamonds
+
+# Reordering color so it's from worst to best. Just like all the other ordered features.
+data <- data %>% 
+  mutate(
+    color = ordered(color,
+                    levels = c(
+                      "J",
+                      "I",
+                      "H",
+                      "G",
+                      "F",
+                      "E",
+                      "D"
+                    )))
 ```
 
 # Introduction
@@ -22,25 +38,26 @@ The purpose of this file is to do some initial exploratory analysis of the diamo
 ## First Look
 A sample, summary, and first glimpse of the diamonds data set is provided below:
 ```{r}
-# Saving the diamonds data as an object: data
-data <- ggplot2::diamonds
-
-# Showing a sample
 head(data)
 
-# Showing a statistical summary
 summary(data)
 
-# Showing the structure of the data
 glimpse(data)
 ```
 There are `r nrow(data)` rows of data. Each row is one observation / one diamond. There are `r ncol(data)` columns of data. Each column is a variable / feature. The features are:
 ```{r}
-# Showing column names
 names(data)
 ```
-
-
+price: price in US dollars (`r min(data$price)` to `r max(data$price)`) <br />
+carat: weight of the diamond (`r min(data$carat)` to `r max(data$carat)`) <br />
+cut: quality of the cut (in order of worst to best; `r levels(data$cut)`) <br />
+color: diamond color (in order of worst to best; `r levels(data$color)`) <br />
+clarity: a measurement of how clear the diamond is (in order of worst to best; `r levels(data$clarity)`) <br />
+x: length in mm (`r min(data$x)` to `r max(data$x)`) <br />
+y: width in mm (`r min(data$y)` to `r max(data$y)`) <br />
+z: depth in mm (`r min(data$z)` to `r max(data$z)`) <br />
+depth: total depth percentage = 2 * z / (x + y) (`r min(data$depth)` to `r max(data$depth)`) <br />
+table: width of the top of a diamond relative to its widest point (`r min(data$table)` to `r max(data$table)`) <br />
 
 # Conclusion
 
