@@ -10,9 +10,10 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 
 library(tidyverse)
+library(plotly)
 
 data <- ggplot2::diamonds
 
@@ -32,7 +33,15 @@ data <- data %>%
 ```
 
 # Introduction
-The purpose of this file is to do some initial exploratory analysis of the diamonds data set. This data set is provided in the ggplot2 package.
+The purpose of this project is to create a machine learning model that can predict the price of a diamond based on its charateristics. The purpose of this file is to do some initial exploratory analysis of the diamonds data set. This data set is provided in the ggplot2 package. This inital exploratory analysis will attempt to answer the following questions: <br /><br />
+
+1. Best of the Best: Imagine someone wants to buy the best possible diamond, and money is no object. They only want to consider diamonds in the top categories of cut (Ideal), color (D), and clarity (IF). They want the most ideal range for depth (59-63) and table (54-57). Within the dataset, if we plot carat versus price can we fit a clean trendline? Is it linear? Exponential? What's the price of the largest carat, and is it the most expensive? <br /><br />
+
+2. Depth and Table Percentages: I found the ideal depth and table values mentioned above online, but let's explore the dataset a little. if we fix the 4 C's (carat, cut, color, and clarity), how much do depth and table impact price? If we widen the ranges slightly, can we save a substantial amount? <br /><br />
+
+3. Best Bang for the Buck: Imagine someone wants to find the diamond which maximizes cut, color, and clarity per dollar. Using the expanded depth and table values from question 2 above, when does price start to increase exponentially for cut? What about for color? And clarity? <br /><br />
+
+4. Bigger is Better: Imagine a guy named Bob who wants to buy a pair of diamonds for his wife, and have them made into earrings for her birthday. In Bob's mind, size (carat) is all that matters. He has $3200. He needs Two diamonds with the exact same cut, color, and clarity (with very comparable depth and table values), and he wants them to be as big as possible. What size carat can he afford? If he adjusts his budget, how much does the "maximum carat" size shift? Can we plot that and fit a line to it to find the "knee in the curve"?<br /><br />
 
 # EDA
 ## First Look
@@ -58,6 +67,144 @@ y: width in mm (`r min(data$y)` to `r max(data$y)`) <br />
 z: depth in mm (`r min(data$z)` to `r max(data$z)`) <br />
 depth: total depth percentage = 2 * z / (x + y) (`r min(data$depth)` to `r max(data$depth)`) <br />
 table: width of the top of a diamond relative to its widest point (`r min(data$table)` to `r max(data$table)`) <br />
+
+
+## Best of the Best
+1. Best of the Best: Imagine someone wants to buy the best possible diamond, and money is no object. They only want to consider diamonds in the top categories of cut (Ideal), color (D), and clarity (IF). They want the most ideal range for depth (59-63) and table (54-57). Within the dataset, if we plot carat versus price can we fit a clean trendline? Is it linear? Exponential? What's the price of the largest carat, and is it the most expensive? <br /><br />
+
+First we need to filter the data set to only the best cut, color, clarity, depth, and table.
+```{r}
+df <- data %>% 
+  filter(
+    cut=="Ideal",
+    color=="D",
+    clarity=="IF",
+    between(depth, 59, 63),
+    between(table, 54, 57))
+
+print(df)
+```
+<br />
+This filters the data to only `r nrow(df)` options. Let's plot carat versus price.
+```{r}
+ggplot(df, aes(x=carat, y=price)) +
+  geom_point()
+```
+<br />
+Looks like a linear model could be viable. Let's create one.
+```{r}
+model_df_lm <- lm(price ~ carat, df)
+
+summary(model_df_lm)
+```
+<br />
+Carat passes the T test (p-value) by a mile and the R squared isn't too bad. Let's plot this model now.
+```{r}
+pred_df_lm <- predict(model_df_lm, df)
+
+df <- df %>% 
+  mutate(pred = pred_df_lm)
+
+ggplot(df, aes(x=carat, y=price)) +
+  geom_point(color="blue") +
+  geom_line(color="red", aes(y=pred))
+```
+<br />
+Looks like the most expensive diamond might not be the largest one. Let's find these two data points.
+```{r}
+df2 <- df %>% 
+  filter(
+    carat == max(carat) |
+      price == max(price)
+  )
+
+print(df2)
+```
+<br />
+Interesting! The most expensive diamond is the not the largest diamond, but it has a larger depth and table compared to the largest carat diamond. This needs a closer look.
+
+## Depth and Table
+2. Depth and Table Percentages: I found the ideal depth and table values mentioned above online, but let's explore the dataset a little. if we fix the 4 C's (carat, cut, color, and clarity), how much do depth and table impact price? If we widen the ranges slightly, can we save a substantial amount? <br /><br />
+
+First let's create a scatter plot of price vs carat.
+```{r}
+ggplot(data, aes(x=carat, y=price)) +
+  geom_point()
+```
+
+<br />
+Next, let's create a scatter plot of price vs depth.
+```{r}
+ggplot(data, aes(x=depth, y=price)) +
+  geom_point()
+```
+<br />
+Now let's create a scatter plot of price vs table.
+```{r}
+ggplot(data, aes(x=table, y=price)) +
+  geom_point()
+```
+
+### Depth Deep Dive
+A 3D scatter plot of price vs carat vs depth.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~depth, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="depth")))
+```
+<br />
+A 3D scatter plot of price vs carat vs depth with cut mapped to color.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~depth, color=~cut, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="depth")))
+```
+<br />
+A 3D scatter plot of price vs carat vs depth with color mapped to color.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~depth, color=~color, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="depth")))
+```
+<br />
+A 3D scatter plot of price vs carat vs depth with clarity mapped to color.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~depth, color=~clarity, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="depth")))
+```
+
+### Table Deep Dive
+A 3D scatter plot of price vs carat vs table.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~table, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="Table")))
+```
+<br />
+A 3D scatter plot of price vs carat vs table with cut mapped to color.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~table, color=~cut, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="table")))
+```
+<br />
+A 3D scatter plot of price vs carat vs table with color mapped to color.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~table, color=~color, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="table")))
+```
+<br />
+A 3D scatter plot of price vs carat vs table with clarity mapped to color.
+```{r}
+plot_ly(data=data, x=~price, y=~carat, z=~table, color=~clarity, type = "scatter3d", marker = list(size=1)) %>% 
+  layout(scene= list(xaxis=list(title="Price"), yaxis=list(title="Carat"), zaxis=list(title="table")))
+```
+<br />
+
+## Best Bang for the Buck
+3. Best Bang for the Buck: Imagine someone wants to find the diamond which maximizes cut, color, and clarity per dollar. Using the expanded depth and table values from question 2 above, when does price start to increase exponentially for cut? What about for color? And clarity? <br /><br />
+
+Under development.
+
+## Bigger is Better
+4. Bigger is Better: Imagine a guy named Bob who wants to buy a pair of diamonds for his wife, and have them made into earrings for her birthday. In Bob's mind, size (carat) is all that matters. He has $3200. He needs Two diamonds with the exact same cut, color, and clarity (with very comparable depth and table values), and he wants them to be as big as possible. What size carat can he afford? If he adjusts his budget, how much does the "maximum carat" size shift? Can we plot that and fit a line to it to find the "knee in the curve"?<br /><br />
+
+Under development.
 
 # Conclusion
 
