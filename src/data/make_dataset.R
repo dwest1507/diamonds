@@ -5,6 +5,20 @@
 # Saving the diamonds data as an object: data
 data <- ggplot2::diamonds
 
+# Reordering color so it's from worst to best. Just like all the other ordered features.
+data <- data %>% 
+  mutate(
+    color = ordered(color,
+                    levels = c(
+                      "J",
+                      "I",
+                      "H",
+                      "G",
+                      "F",
+                      "E",
+                      "D"
+                    )))
+
 # Setting seed for reproducibility
 set.seed(123)
 # Creating a random sample index
