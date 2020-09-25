@@ -44,41 +44,36 @@ A sample of the data is provided below:
 ```{r}
 head(data)
 ```
-Looks like there is a mix of numeric and categorical data. The numeric data (carat, depth, table, x, y, & z) are doubles (dbl), which means they are numerics with decimal places. Price is a numeric integer, so it will not have any decimal places. The categorical data (cut, color, and clarity) are ordered (ord), which means it has a specific order, such as best to worst. Below is a quick statistical summary of the data:
-```{r}
-summary(data)
-```
-A minimum, 1st quartile, median, mean, 3rd quartile, and maximum is provided for all the numeric data. For example, the median price of diamonds in this data set is `r median(data$price)`. A data count is provided for all categorical data. For example, there are `r data %>% filter(cut=="Ideal") %>% count() %>% pull()` diamonds that are Ideal cut in this data set. Since all the categorical data is ordered, the counts are in its pre-specified order. Cut is from `r min(levels(data$cut))`
-
+Looks like there is a mix of numeric and categorical data. The numeric data (carat, depth, table, x, y, & z) are doubles (dbl), which means they are numerics with decimal places. Price is a numeric integer, so it will not have any decimal places. The categorical data (cut, color, and clarity) are ordered (ord), which means it has a specific order, such as best to worst. Similar to the sample above, the glimpse function provides a sample of the data in a different format that is more preferable when a data set is very large. 
 ```{r}
 glimpse(data)
 ```
-
-
-
-There are `r nrow(data)` rows of data. Each row is one observation / one diamond. There are `r ncol(data)` columns of data. Each column is a variable / feature. The features are:
+There are `r nrow(data)` rows of data. Each row is one observation / one diamond. There are `r ncol(data)` columns of data. Each column is a variable / feature. Below is a quick statistical summary of each feature:
 ```{r}
-names(data)
+summary(data)
 ```
-price: price in US dollars (`r min(data$price)` to `r max(data$price)`) <br />
+A minimum, 1st quartile, median, mean, 3rd quartile, and maximum is provided for all the numeric data. For example, the median price of diamonds in this data set is `r median(data$price)`. A data count is provided for all categorical data. For example, there are `r data %>% filter(cut=="Ideal") %>% count() %>% pull()` diamonds that are Ideal cut in this data set. Since all the categorical data is ordered, the counts are in its pre-specified order. For the example, the order for color is: `r data %>% arrange(color) %>% select(color) %>% unique() %>% pull()`. Below is a definition for each feature: <br />
+<br />
+
 carat: weight of the diamond (`r min(data$carat)` to `r max(data$carat)`) <br />
 cut: quality of the cut (in order of worst to best; `r levels(data$cut)`) <br />
-color: diamond color (in order of worst to best; `r levels(data$color)`) <br />
+color: diamond color (in order of best to worst; `r levels(data$color)`) <br />
 clarity: a measurement of how clear the diamond is (in order of worst to best; `r levels(data$clarity)`) <br />
+depth: total depth percentage (total height divided by total width) = 2 * z / (x + y) (`r min(data$depth)` to `r max(data$depth)`) <br />
+table: width of the top of a diamond relative to its widest point (`r min(data$table)` to `r max(data$table)`) <br />
+price: price in US dollars (`r min(data$price)` to `r max(data$price)`) <br />
 x: length in mm (`r min(data$x)` to `r max(data$x)`) <br />
 y: width in mm (`r min(data$y)` to `r max(data$y)`) <br />
 z: depth in mm (`r min(data$z)` to `r max(data$z)`) <br />
-depth: total depth percentage (total height divided by total width) = 2 * z / (x + y) (`r min(data$depth)` to `r max(data$depth)`) <br />
-table: width of the top of a diamond relative to its widest point (`r min(data$table)` to `r max(data$table)`) <br />
-
-
+<br />
+My OCD is kicking in a little bit for color. It is in the order of best to worst, while cut and clarity are in order of worst to best. The script below reorders color from worst to best for consistency. This will have no effect what-so-ever on the analysis, it's just my personal preference.
 ```{r}
 # Reordering color so it's from worst to best. Just like all the other ordered features.
 # This is personal preference. It's not a necessary step.
-data <- data %>% 
-  mutate(
-    color = ordered(color,
-                    levels = c(
+data <- data %>%                  # Create a new object, data, from the old object, data
+  mutate(                         # Change its columns
+    color = ordered(color,        # Make the color column and ordered column
+                    levels = c(   # The order/levels are as follows:
                       "J",
                       "I",
                       "H",
@@ -88,10 +83,209 @@ data <- data %>%
                       "D"
                     )))
 ```
+Now we can get to the interesting stuff. Let's look at how price is affected by each individual feature.
+
+### Price vs Carat
+Below is a scatter plot of price vs carat:
+```{r}
+ggplot(data, aes(x=carat, y=price)) + # Plot the object data, with carat mapped to the x axis and price mapped to the y axis
+  geom_point(alpha=0.1)               # Make the plot a scatter plot. Make each point 10% transparent/alpha
+```
+<br />
+Price increases at an increasing rate as carat increases.
+
+### Price vs Cut
+Below is a box-plot of price by cut.
+```{r}
+{ggplot(data, aes(x=cut, y=price)) + # Plot the object data, with cut mapped to the x axis and price mapped to the y axis
+  geom_boxplot()} %>%                # Make the plot a box plot
+  ggplotly()                         # Make the plot interactive with the ggplotly function
+```
+<br />
+There is no immediately visible trend. I would expect price to increase as the cut becomes better. However, other features may be affecting this box-plot. For example, maybe the average carat size for ideal diamonds is lower than the average carat size for fair. Therefore, the average price for ideal cuts in this data set are lower than fair cuts. This will be explored in more depth later on in this analysis. For now, we are only going to look at price vs each individual feature.
+
+### Price vs Color
+Below is a box-plot of price by color.
+```{r}
+{ggplot(data, aes(x=color, y=price))+
+  geom_boxplot()} %>% 
+  ggplotly()
+```
+<br />
+Very interesting! As color gets better, price decreases. This absolutely does not pass the common sense test. Similar to cut, other features (like carat) must be affecting these results.
+
+### Price vs Clarity
+Below is a box-plot of price by clarity.
+```{r}
+{ggplot(data, aes(x=clarity, y=price))+
+  geom_boxplot()} %>% 
+  ggplotly()
+```
+<br />
+These are similar results to color. As clarity gets better, price decreases. Once again, this does not pass the common sense test.
+
+### Price vs Depth Percentage
+Below is a scatter plot of price vs depth percentage.
+```{r}
+ggplot(data, aes(x=depth, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+It looks like as the range of depth narrows, the price increases. It appears more expensive diamonds are roughly around 58% to 63% depth percentage.
+
+### Price vs Table Percentage
+Below is a scatter plot of price vs table percentage.
+```{r}
+ggplot(data, aes(x=table, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+This looks similar to depth percentage. As the range of table percentage narrows, the price increases. Although, it doesn't to appear to be as drastic as depth percentage.
+
+### Price vs Length (x)
+Below is a scatter plot of price vs length (x).
+```{r}
+ggplot(data, aes(x=x, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+This looks similar to carat. Price increases at an increasing rate as length increases. There's also some data points that have a length of zero. These must be missing data points and should be converted to NAs. If they are not, this can mess up some predictive models down the line. First let's find out how many zeros there are.
+```{r}
+df <- data %>%     # Create a new object df from the object data
+  filter(x==0)     # show only the data that has a zero value for x
+
+print(df)          # Display the object df
+```
+There are `r nrow(df)` rows of data with x labeled as zero and there are `r nrow(data)` rows of data total. This is a small percent (`r nrow(df)/nrow(data)`) of the total data, but this should still be addressed. These values will be converted into NAs and what to do with them will be determined during model exploration. These rows of data could be removed from the data set completely, or a median length can be assumed, or potentially x can be calculated from depth and table percentage. Is it even worth addressing it all? This will be determined later in this project. 
+<br /><br />
+
+I also see zeros for y and z. The script below determines how many zeros there are for width (y):
+```{r}
+df <- data %>% 
+  filter(y==0)
+
+nrow(df)   # display how many rows are in object df
+```
+And for depth (z):
+```{r}
+df <- data %>% 
+  filter(z==0)
+
+nrow(df)
+```
+There are `r nrow(df)` missing data points for z. That is `r nrow(df)/nrow(data)` percent of the data. It's slightly more that x and y, but still a small sample. The script below will convert all zeros for x, y, and z into NAs, specifically numeric NAs.
+```{r}   
+data <- data %>%          # create a new object called data, from the old object called data
+  mutate(                 # change the columns in the old object
+    x = case_when(        # Change the column x by the following conditions
+      x==0 ~ NA_real_,    # When x is 0, make it a NA
+      TRUE ~ x),          # For everything else, keep x as is
+    y = case_when(        # same logic as x
+      y==0 ~ NA_real_,   
+      TRUE ~ y),   
+    z = case_when(        # same logic as x
+      z==0 ~ NA_real_,
+      TRUE ~ z))
+```
+All zeros are now NAs.
+
+### Price vs Width (y)
+Below is a scatter plot of price vs width (y).
+```{r}
+ggplot(data, aes(x=y, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+First off, there are some outliers past a y of 20. Let's see what these points are.
+```{r}
+df <- data %>% 
+  filter(y>20)
+
+print(df)
+```
+These values for y can't be right. One way to double check is to use the equation for depth percentage: depth = 2 * z/(x + y). Using a little algebra we can solve for y: y = (2z/depth) - x. Before using these equations, we need a proof of concept. Depth and y will be calculated using these equations and we'll check if they equal the depth and y provided in the data. If they do, the equations are true.
+```{r}
+df <- data %>%
+  select(depth, table, x, y, z) %>%   # Select only these columns from data
+  mutate(
+    depth_calc = round(((2*z)/(x+y))*100, # create a new column, depth_calc using the equation
+                       digits = 1),       # round to the nearest one digit
+    y_calc = round((2*z/(depth/100))-x,   # create a new column, y_calc using the equation
+                   digits = 2),           # round to the nearest two digits
+    depth_check = depth==depth_calc,      # create depth_check, which is true if depth equals depth_calc
+    y_check = y==y_calc) %>%              # create y_check, which is true if y equals y_calc
+    select(depth, depth_calc, depth_check, y, y_calc, y_check) # Select only these columns
+  
+head(df, n = 20) # show the first 20 rows
+```
+It looks like the equations work for the most part. In some instances they don't match 100%, but they are in the ballpark. This may be due to rounding errors. Now that these equations are confirmed. Let's calculate y for the two outliers.
+
+```{r}
+df <- data %>% 
+  filter(y>20) %>% 
+  mutate(y_calc = round((2*z/(depth/100))-x,
+                   digits = 2))
+
+print(df)
+```
+These values seem a lot more reasonable. Now let's commit this change to the data and re-plot.
+```{r}
+data <- data %>% 
+  mutate(
+    y = case_when(
+      y>20 ~ round((2*z/(depth/100))-x,digits = 2),
+      TRUE ~ y))
+```
+```{r}
+ggplot(data, aes(x=y, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+Those data points still look like they may be outliers but they are more reasonable than before, and trend is easier to see in this chart. Price increases at an increasing rate as y increases.
+
+### Price vs Depth (z)
+Below is a scatter plot of price vs depth (z).
+```{r}
+ggplot(data, aes(x=z, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+Looks like there is an outlier past a depth (z) of 30. This may be a similar case as seen with width (y). Below shows this data point:
+```{r}
+df <- data %>% 
+  filter(z>30)
+
+print(df)
+```
+This doesn't pass the common sense test. Using the depth percentage equation we can calcuate depth (z) by using: z = depth*(x+y)/2. The results are below:
+```{r}
+df <- df %>% 
+  mutate(
+    z_calc = round(((depth/100)*(x+y))/2, digits = 2)
+  )
+
+print(df)
+```
+The calculated z looks more reasonable. The script below commits this change to the data and re-plots.
+```{r}
+data <- data %>% 
+  mutate(
+    z = case_when(
+      z>30 ~ round(((depth/100)*(x+y))/2, digits = 2),
+      TRUE ~ z
+    )
+  )
+```
+```{r}
+ggplot(data, aes(x=z, y=price))+
+  geom_point(alpha=0.1)
+```
+<br />
+That's better! This trend appears to be the same as carat, x, and y. Now, onto some more detailed data exploration.
 
 
 ## Best of the Best
-1. Best of the Best: Imagine someone wants to buy the best possible diamond, and money is no object. They only want to consider diamonds in the top categories of cut (Ideal), color (D), and clarity (IF). They want the most ideal range for depth (59-63) and table (54-57). Within the dataset, if we plot carat versus price can we fit a clean trendline? Is it linear? Exponential? What's the price of the largest carat, and is it the most expensive? <br /><br />
+Best of the Best: Imagine someone wants to buy the best possible diamond, and money is no object. They only want to consider diamonds in the top categories of cut (Ideal), color (D), and clarity (IF). They want the most ideal range for depth (59-63) and table (54-57). Within the dataset, if we plot carat versus price can we fit a clean trendline? Is it linear? Exponential? What's the price of the largest carat, and is it the most expensive? <br /><br />
 
 First we need to filter the data set to only the best cut, color, clarity, depth, and table.
 ```{r}
@@ -145,7 +339,7 @@ print(df2)
 Interesting! The most expensive diamond is the not the largest diamond, but it has a larger depth and table compared to the largest carat diamond. This needs a closer look.
 
 ## Depth and Table
-2. Depth and Table Percentages: I found the ideal depth and table values mentioned above online, but let's explore the dataset a little. if we fix the 4 C's (carat, cut, color, and clarity), how much do depth and table impact price? If we widen the ranges slightly, can we save a substantial amount? <br /><br />
+Depth and Table Percentages: I found the ideal depth and table values mentioned above online, but let's explore the dataset a little. if we fix the 4 C's (carat, cut, color, and clarity), how much do depth and table impact price? If we widen the ranges slightly, can we save a substantial amount? <br /><br />
 
 First let's create a scatter plot of price vs carat.
 ```{r}
@@ -218,7 +412,7 @@ plot_ly(data=data, x=~price, y=~carat, z=~table, color=~clarity, type = "scatter
 <br />
 
 ## Best Bang for the Buck
-3. Best Bang for the Buck: Imagine someone wants to find the diamond which maximizes cut, color, and clarity per dollar. Using the expanded depth and table values from question 2 above, when does price start to increase exponentially for cut? What about for color? And clarity? <br /><br />
+Best Bang for the Buck: Imagine someone wants to find the diamond which maximizes cut, color, and clarity per dollar. Using the expanded depth and table values from question 2 above, when does price start to increase exponentially for cut? What about for color? And clarity? <br /><br />
 
 Under development.
 
@@ -227,5 +421,27 @@ Under development.
 
 Under development.
 
+# Model Exploration
+## Linear Regression
+Under development.
+
+## Random Forest
+Under development.
+
+## Model Comparison
+Under development.
+
+# Discussion
+Throughout this analysis some assumptions and data cleaning steps have been made. These decisions will impact how each predictive model will perform. A sensitivity analysis is recommended for the following data cleaning issues:
+<br /><br />
+1. Issue: x, y, and z values labeled as zeros. <br />
+Action took in this analysis: Make all zeros NAs and ignore NAs in model exploration.<br />
+<br />
+2. Issue: Potential outliers for y and z. <br />
+Action took in this analysis: Estimate y and z using the depth equation <br />
+
 # Conclusion
+
+
+
 
