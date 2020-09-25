@@ -1,7 +1,7 @@
 ---
-title: "01-EDA"
+title: "Diamonds: Predicting Price"
 author: "David West"
-date: "9/12/2020"
+date: "9/25/2020"
 output: 
   html_document:
     toc: true
@@ -11,13 +11,70 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
 
+# Introduction
+The purpose of this project is to create a machine learning model that can predict the price of a diamond based on its charateristics. This report will start with an initial exploratory data analysis (EDA). The EDA will be filled with data visualizations and inital Q&As to help understand a data set. The EDA is then followed by a model exploration. Different machine learning alogrithms will be used to create predictive models. Models will then be compared against each other and the most accurate predictive model will be determined. The conclusion section will provide an executive summary of data insights and the selected predictive model.
+
+# EDA
+This inital exploratory analysis will attempt to answer the following questions: <br /><br />
+
+1. First Look: What does the data look like? What are some initial descriptive statistics and insights. <br /><br />
+
+2. Best of the Best: Imagine someone wants to buy the best possible diamond, and money is no object. They only want to consider diamonds in the top categories of cut (Ideal), color (D), and clarity (IF). They want the most ideal range for depth (59-63) and table (54-57). Within the dataset, if we plot carat versus price can we fit a clean trendline? Is it linear? Exponential? What's the price of the largest carat, and is it the most expensive? <br /><br />
+
+3. Depth and Table Percentages: I found the ideal depth and table values mentioned above online, but let's explore the dataset a little. if we fix the 4 C's (carat, cut, color, and clarity), how much do depth and table impact price? If we widen the ranges slightly, can we save a substantial amount? <br /><br />
+
+4. Best Bang for the Buck: Imagine someone wants to find the diamond which maximizes cut, color, and clarity per dollar. Using the expanded depth and table values from question 2 above, when does price start to increase exponentially for cut? What about for color? And clarity? <br /><br />
+
+5. Bigger is Better: Imagine a guy named Bob who wants to buy a pair of diamonds for his wife, and have them made into earrings for her birthday. In Bob's mind, size (carat) is all that matters. He has $3200. He needs Two diamonds with the exact same cut, color, and clarity (with very comparable depth and table values), and he wants them to be as big as possible. What size carat can he afford? If he adjusts his budget, how much does the "maximum carat" size shift? Can we plot that and fit a line to it to find the "knee in the curve"?<br /><br />
+
+## First Look
+This data set is provided in the ggplot2 package from CRAN. Let's load the tidyverse collection of packages, which includes ggplot2 and some other packages (like dplyr) which are useful for data manipulation. Let's also load the plotly package, which allows us to create advanced visualizations.
+```{r}
+# Load libraries needed for EDA
 library(tidyverse)
 library(plotly)
 
+# save diamonds data into an object called data
 data <- ggplot2::diamonds
+```
 
+A sample of the data is provided below:
+```{r}
+head(data)
+```
+Looks like there is a mix of numeric and categorical data. The numeric data (carat, depth, table, x, y, & z) are doubles (dbl), which means they are numerics with decimal places. Price is a numeric integer, so it will not have any decimal places. The categorical data (cut, color, and clarity) are ordered (ord), which means it has a specific order, such as best to worst. Below is a quick statistical summary of the data:
+```{r}
+summary(data)
+```
+A minimum, 1st quartile, median, mean, 3rd quartile, and maximum is provided for all the numeric data. For example, the median price of diamonds in this data set is `r median(data$price)`. A data count is provided for all categorical data. For example, there are `r data %>% filter(cut=="Ideal") %>% count() %>% pull()` diamonds that are Ideal cut in this data set. Since all the categorical data is ordered, the counts are in its pre-specified order. Cut is from `r min(levels(data$cut))`
+
+```{r}
+glimpse(data)
+```
+
+
+
+There are `r nrow(data)` rows of data. Each row is one observation / one diamond. There are `r ncol(data)` columns of data. Each column is a variable / feature. The features are:
+```{r}
+names(data)
+```
+price: price in US dollars (`r min(data$price)` to `r max(data$price)`) <br />
+carat: weight of the diamond (`r min(data$carat)` to `r max(data$carat)`) <br />
+cut: quality of the cut (in order of worst to best; `r levels(data$cut)`) <br />
+color: diamond color (in order of worst to best; `r levels(data$color)`) <br />
+clarity: a measurement of how clear the diamond is (in order of worst to best; `r levels(data$clarity)`) <br />
+x: length in mm (`r min(data$x)` to `r max(data$x)`) <br />
+y: width in mm (`r min(data$y)` to `r max(data$y)`) <br />
+z: depth in mm (`r min(data$z)` to `r max(data$z)`) <br />
+depth: total depth percentage (total height divided by total width) = 2 * z / (x + y) (`r min(data$depth)` to `r max(data$depth)`) <br />
+table: width of the top of a diamond relative to its widest point (`r min(data$table)` to `r max(data$table)`) <br />
+
+
+```{r}
 # Reordering color so it's from worst to best. Just like all the other ordered features.
+# This is personal preference. It's not a necessary step.
 data <- data %>% 
   mutate(
     color = ordered(color,
@@ -31,42 +88,6 @@ data <- data %>%
                       "D"
                     )))
 ```
-
-# Introduction
-The purpose of this project is to create a machine learning model that can predict the price of a diamond based on its charateristics. The purpose of this file is to do some initial exploratory analysis of the diamonds data set. This data set is provided in the ggplot2 package. This inital exploratory analysis will attempt to answer the following questions: <br /><br />
-
-1. Best of the Best: Imagine someone wants to buy the best possible diamond, and money is no object. They only want to consider diamonds in the top categories of cut (Ideal), color (D), and clarity (IF). They want the most ideal range for depth (59-63) and table (54-57). Within the dataset, if we plot carat versus price can we fit a clean trendline? Is it linear? Exponential? What's the price of the largest carat, and is it the most expensive? <br /><br />
-
-2. Depth and Table Percentages: I found the ideal depth and table values mentioned above online, but let's explore the dataset a little. if we fix the 4 C's (carat, cut, color, and clarity), how much do depth and table impact price? If we widen the ranges slightly, can we save a substantial amount? <br /><br />
-
-3. Best Bang for the Buck: Imagine someone wants to find the diamond which maximizes cut, color, and clarity per dollar. Using the expanded depth and table values from question 2 above, when does price start to increase exponentially for cut? What about for color? And clarity? <br /><br />
-
-4. Bigger is Better: Imagine a guy named Bob who wants to buy a pair of diamonds for his wife, and have them made into earrings for her birthday. In Bob's mind, size (carat) is all that matters. He has $3200. He needs Two diamonds with the exact same cut, color, and clarity (with very comparable depth and table values), and he wants them to be as big as possible. What size carat can he afford? If he adjusts his budget, how much does the "maximum carat" size shift? Can we plot that and fit a line to it to find the "knee in the curve"?<br /><br />
-
-# EDA
-## First Look
-A sample, summary, and first glimpse of the diamonds data set is provided below:
-```{r}
-head(data)
-
-summary(data)
-
-glimpse(data)
-```
-There are `r nrow(data)` rows of data. Each row is one observation / one diamond. There are `r ncol(data)` columns of data. Each column is a variable / feature. The features are:
-```{r}
-names(data)
-```
-price: price in US dollars (`r min(data$price)` to `r max(data$price)`) <br />
-carat: weight of the diamond (`r min(data$carat)` to `r max(data$carat)`) <br />
-cut: quality of the cut (in order of worst to best; `r levels(data$cut)`) <br />
-color: diamond color (in order of worst to best; `r levels(data$color)`) <br />
-clarity: a measurement of how clear the diamond is (in order of worst to best; `r levels(data$clarity)`) <br />
-x: length in mm (`r min(data$x)` to `r max(data$x)`) <br />
-y: width in mm (`r min(data$y)` to `r max(data$y)`) <br />
-z: depth in mm (`r min(data$z)` to `r max(data$z)`) <br />
-depth: total depth percentage = 2 * z / (x + y) (`r min(data$depth)` to `r max(data$depth)`) <br />
-table: width of the top of a diamond relative to its widest point (`r min(data$table)` to `r max(data$table)`) <br />
 
 
 ## Best of the Best
