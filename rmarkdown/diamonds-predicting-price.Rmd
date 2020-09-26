@@ -422,8 +422,77 @@ Under development.
 Under development.
 
 # Model Exploration
+Time to create some predictive machine learning models!
+```{r, echo=F}
+# This script is to prep the data
+# This way I don't have to re-run everything before this
+data <- ggplot2::diamonds
+
+# Reordering color so it's from worst to best. Just like all the other ordered features.
+# This is personal preference. It's not a necessary step.
+data <- data %>%                  # Create a new object, data, from the old object, data
+  mutate(                         # Change its columns
+    color = ordered(color,        # Make the color column and ordered column
+                    levels = c(   # The order/levels are as follows:
+                      "J",
+                      "I",
+                      "H",
+                      "G",
+                      "F",
+                      "E",
+                      "D"
+                    )))
+
+# Changing zeros into NAs
+data <- data %>%          # create a new object called data, from the old object called data
+  mutate(                 # change the columns in the old object
+    x = case_when(        # Change the column x by the following conditions
+      x==0 ~ NA_real_,    # When x is 0, make it a NA
+      TRUE ~ x),          # For everything else, keep x as is
+    y = case_when(        # same logic as x
+      y==0 ~ NA_real_,   
+      TRUE ~ y),   
+    z = case_when(        # same logic as x
+      z==0 ~ NA_real_,
+      TRUE ~ z))
+
+# Estimate y outliers
+data <- data %>% 
+  mutate(
+    y = case_when(
+      y>20 ~ round((2*z/(depth/100))-x,digits = 2),
+      TRUE ~ y))
+
+# Estimate z outliers
+data <- data %>% 
+  mutate(
+    z = case_when(
+      z>30 ~ round(((depth/100)*(x+y))/2, digits = 2),
+      TRUE ~ z
+    )
+  )
+```
+
+
 ## Linear Regression
-Under development.
+First, let's use a classic linear regression model. We'll start with a simple linear regression and then try some multivariate linear regression.
+
+### Simple Linear Regression
+Simple linear regression is your classic y=b+mx. The y is your dependent variable; the variable we wish to predict. In this case, it is price. The x is you independent variable; the feature that will predict the dependent variable. In this case, we'll start with carat which seemed to have a strong correlation with price. The m is your slope and the b is you y-intercept. The script below creates the simple linear model:
+```{r}
+# Create an object called model_lm1 by using the lm fucntion
+model_lm1 <- lm(price ~ carat,        # The formula is price as a function of carat
+                data)                 # The data is an object called data
+
+summary(model_lm1) # Stats summary of the model
+```
+The created formula is Price = `r model_lm1$coefficients[[1]]` + `r model_lm1$coefficients[[1]]` * Carat. The adjusted R-squared of `r summary(model_lm1)[[9]]`isn't too bad, and carat's p-value passes the T test.
+
+
+
+
+### Multivariate Linear Regression
+
 
 ## Random Forest
 Under development.
