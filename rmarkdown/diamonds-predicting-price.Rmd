@@ -422,8 +422,14 @@ Under development.
 Under development.
 
 # Model Exploration
-Time to create some predictive machine learning models!
-```{r, echo=F}
+The script below summarizes all the data prep and cleaning steps in previous sections.
+```{r}
+# Load libraries needed for model exploration
+library(tidyverse)
+library(Metrics)
+library(randomForest)
+library(broom)
+
 # This script is to prep the data
 # This way I don't have to re-run everything before this
 data <- ggplot2::diamonds
@@ -472,7 +478,23 @@ data <- data %>%
     )
   )
 ```
+One more step before we go into creating models. Let's create two random samples from the data. One sample will train the ML model, this is called the training data. And another smaller sample will be used to test the accuracy of the ML, this is called the testing data. Splitting up the data this way will allow for a fair comparison between models that doesn't allow an overfit model to have a competitive edge over other models.
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
 
+# Create a random number vector from 1 to the number of rows in the data set.
+# Make the length of the vector equal to about 80% of the data.
+train_index <- sample(1:nrow(data), round(nrow(data)*0.8, digits = 0))
+
+# subset the data into training data (80% of the data)
+train <- data[train_index,]
+# subset the data into testing data (the remaining 20%)
+test <- data[-train_index,]
+```
+
+
+Now let's create some predictive machine learning models!
 
 ## Linear Regression
 First, let's use a classic linear regression model. We'll start with a simple linear regression and then try some multivariate linear regression.
@@ -480,22 +502,278 @@ First, let's use a classic linear regression model. We'll start with a simple li
 ### Simple Linear Regression
 Simple linear regression is your classic y=b+mx. The y is your dependent variable; the variable we wish to predict. In this case, it is price. The x is you independent variable; the feature that will predict the dependent variable. In this case, we'll start with carat which seemed to have a strong correlation with price. The m is your slope and the b is you y-intercept. The script below creates the simple linear model:
 ```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
 # Create an object called model_lm1 by using the lm fucntion
 model_lm1 <- lm(price ~ carat,        # The formula is price as a function of carat
-                data)                 # The data is an object called data
+                train)                 # The data is an object called train
 
 summary(model_lm1) # Stats summary of the model
 ```
-The created formula is Price = `r model_lm1$coefficients[[1]]` + `r model_lm1$coefficients[[1]]` * Carat. The adjusted R-squared of `r summary(model_lm1)[[9]]`isn't too bad, and carat's p-value passes the T test.
 
+The created formula is Price = `r model_lm1$coefficients[[1]]` + `r model_lm1$coefficients[[1]]` * Carat. Now, let's use this model to predict the values in the test data, and then analyze its effectiveness using three metrics: MAE, RMSE, and Adjusted R Square.
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_lm1 <- predict(model_lm1, test)
 
+# calculate mean absolute error of model's predictions
+mae_lm1 <- mae(test$price, predict_lm1)
+mae_lm1
+
+# calculate root mean squared error of model's predictions
+rmse_lm1 <- rmse(test$price, predict_lm1)
+rmse_lm1
+
+# calculate r squared
+SSR_lm1 <-sse(test$price, predict_lm1)      # residual sum of squares
+SST_lm1 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_lm1 <- 1 - SSR_lm1/SST_lm1
+
+# calculate adjusted r squared
+RsqAdj_lm1 <- 1 - (1-Rsq_lm1)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_lm1
+```
+This model predicted the test data with a mean absolute error of `r mae_lm1`, a root mean squared error of `r rmse_lm1`, and a adjusted R square of `r RsqAdj_lm1`. Mean absolute error is the average of the absolute difference between actual values and the predictions. The root mean squared error is the square root of the squared difference between the predictions and actual values. The adjusted r square measures how well the actual outcomes are replicated by the regression and is adjusted (penalized) for how many independent variables are used for the model. Now let's build a multivariate linear regression and compare the results.
 
 
 ### Multivariate Linear Regression
+#### Price vs All
+The script below creates a multivariate linear regression model using all the potential variables in the data.
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
 
+# Create an object called model_lm1 by using the lm fucntion
+model_lm2 <- lm(price ~ .,        # The formula is price as a function of all other variables
+                train,                # The data is an object called train
+                na.action = na.omit)  # Exclude NAs               
+
+summary(model_lm2) # Stats summary of the model
+```
+
+Now let's predict the testing data.
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_lm2 <- predict(model_lm2, test,
+                       na.action = na.omit) # exclude NAs
+
+# calculate mean absolute error of model's predictions
+mae_lm2 <- mae(test$price, predict_lm2)
+mae_lm2
+
+# calculate root mean squared error of model's predictions
+rmse_lm2 <- rmse(test$price, predict_lm2)
+rmse_lm2
+
+# calculate r squared
+SSR_lm2 <-sse(test$price, predict_lm2)      # residual sum of squares
+SST_lm2 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_lm2 <- 1 - SSR_lm2/SST_lm2
+
+# calculate adjusted r squared
+RsqAdj_lm2 <- 1 - (1-Rsq_lm2)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_lm2
+```
+Interesting! Adding more variables, led to a worse model. It has a higher MAE & RMSE, and a lower adjusted R Square. What if we only used the 4 C's.
+#### Price vs 4 C's
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
+# Create an object called model_lm1 by using the lm fucntion
+model_lm3 <- lm(price ~ carat + cut + color + clarity,        # The formula is price as a function of all other variables
+                train,                # The data is an object called train
+                na.action = na.omit)  # Exclude NAs               
+
+summary(model_lm3) # Stats summary of the model
+```
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_lm3 <- predict(model_lm3, test,
+                       na.action = na.omit) # exclude NAs
+
+# calculate mean absolute error of model's predictions
+mae_lm3 <- mae(test$price, predict_lm3)
+mae_lm3
+
+# calculate root mean squared error of model's predictions
+rmse_lm3 <- rmse(test$price, predict_lm3)
+rmse_lm3
+
+# calculate r squared
+SSR_lm3 <-sse(test$price, predict_lm3)      # residual sum of squares
+SST_lm3 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_lm3 <- 1 - SSR_lm3/SST_lm3
+
+# calculate adjusted r squared
+RsqAdj_lm3 <- 1 - (1-Rsq_lm3)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_lm3
+```
+This is looking better! What about just depth and table? I have a hunch these two variables are going to be the worst predictors.
+
+#### Price vs Depth and Table
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
+# Create an object called model_lm1 by using the lm fucntion
+model_lm4 <- lm(price ~ depth + table,        # The formula is price as a function of all other variables
+                train,                # The data is an object called train
+                na.action = na.omit)  # Exclude NAs               
+
+summary(model_lm4) # Stats summary of the model
+```
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_lm4 <- predict(model_lm4, test,
+                       na.action = na.omit) # exclude NAs
+
+# calculate mean absolute error of model's predictions
+mae_lm4 <- mae(test$price, predict_lm4)
+mae_lm4
+
+# calculate root mean squared error of model's predictions
+rmse_lm4 <- rmse(test$price, predict_lm4)
+rmse_lm4
+
+# calculate r squared
+SSR_lm4 <-sse(test$price, predict_lm4)      # residual sum of squares
+SST_lm4 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_lm4 <- 1 - SSR_lm4/SST_lm4
+
+# calculate adjusted r squared
+RsqAdj_lm4 <- 1 - (1-Rsq_lm4)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_lm4
+```
+Just as expected. This is not a good model at all! How about x, y, and z?
+
+#### Price vs Dimensions (x, y, & z)
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
+# Create an object called model_lm1 by using the lm fucntion
+model_lm5 <- lm(price ~ x + y + z,        # The formula is price as a function of all other variables
+                train,                # The data is an object called train
+                na.action = na.omit)  # Exclude NAs               
+
+summary(model_lm5) # Stats summary of the model
+```
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_lm5 <- predict(model_lm5, test,
+                       na.action = na.omit) # exclude NAs
+
+# calculate mean absolute error of model's predictions
+mae_lm5 <- mae(test$price, predict_lm5)
+mae_lm5
+
+# calculate root mean squared error of model's predictions
+rmse_lm5 <- rmse(test$price, predict_lm5)
+rmse_lm5
+
+# calculate r squared
+SSR_lm5 <-sse(test$price, predict_lm5)      # residual sum of squares
+SST_lm5 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_lm5 <- 1 - SSR_lm5/SST_lm5
+
+# calculate adjusted r squared
+RsqAdj_lm5 <- 1 - (1-Rsq_lm5)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_lm5
+```
+Not the best, but does it help or hurt if we add it to the 4 C's?
+
+#### Price vs 4 C's and Dimensions
+```{r}
+# Set the seed for reproducibility
+set.seed(123)
+
+# Create an object called model_lm1 by using the lm fucntion
+model_lm6 <- lm(price ~ carat + cut + color + clarity + x + y + z,        # The formula is price as a function of all other variables
+                train,                # The data is an object called train
+                na.action = na.omit)  # Exclude NAs               
+
+summary(model_lm6) # Stats summary of the model
+```
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_lm6 <- predict(model_lm6, test,
+                       na.action = na.omit) # exclude NAs
+
+# calculate mean absolute error of model's predictions
+mae_lm6 <- mae(test$price, predict_lm6)
+mae_lm6
+
+# calculate root mean squared error of model's predictions
+rmse_lm6 <- rmse(test$price, predict_lm6)
+rmse_lm6
+
+# calculate r squared
+SSR_lm6 <-sse(test$price, predict_lm6)      # residual sum of squares
+SST_lm6 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_lm6 <- 1 - SSR_lm6/SST_lm6
+
+# calculate adjusted r squared
+RsqAdj_lm6 <- 1 - (1-Rsq_lm6)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_lm6
+```
+There's our answer. It hurts, doesn't help. It looks like the 4 C's are the best predictors. Now let's try a ML model other than linear regression.
 
 ## Random Forest
-Under development.
+#### Price vs 4 C's
+Let's create a random forest model with the 4 C's.
+```{r}
+model_rf1 <- randomForest(price ~ carat + cut + color + clarity, 
+                          train)
+```
+```{r}
+model_rf1
+```
+```{r}
+plot(model_rf1)
+```
+I looks like there 100 trees (iterations) are enough for this model.
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_rf1 <- predict(model_rf1, test)
+
+# calculate mean absolute error of model's predictions
+mae_rf1 <- mae(test$price, predict_rf1)
+mae_rf1
+
+# calculate root mean squared error of model's predictions
+rmse_rf1 <- rmse(test$price, predict_rf1)
+rmse_rf1
+
+# calculate r squared
+SSR_rf1 <-sse(test$price, predict_rf1)      # residual sum of squares
+SST_rf1 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_rf1 <- 1 - SSR_rf1/SST_rf1
+
+# calculate adjusted r squared
+RsqAdj_rf1 <- 1 - (1-Rsq_rf1)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_rf1
+```
+It's good, but not as good as the linear regression. What if we use all the data?
+
+#### Price vs All
+```{r}
+model_rf2 <- randomForest(price ~ ., 
+                          train,
+                          na.action = na.omit, # remove NAs
+                          ntree=300)           # only create 300 trees / iterations
+```
+```{r}
+model_rf2
+```
+```{r}
+plot(model_rf2)
+```
+I looks like there 100 trees (iterations) are enough for this model too.
+
+
 
 ## Model Comparison
 Under development.
