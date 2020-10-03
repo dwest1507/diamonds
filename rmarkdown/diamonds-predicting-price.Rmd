@@ -724,6 +724,8 @@ There's our answer. It hurts, doesn't help. It looks like the 4 C's are the best
 #### Price vs 4 C's
 Let's create a random forest model with the 4 C's.
 ```{r}
+set.seed(123)
+
 model_rf1 <- randomForest(price ~ carat + cut + color + clarity, 
                           train)
 ```
@@ -733,7 +735,8 @@ model_rf1
 ```{r}
 plot(model_rf1)
 ```
-I looks like there 100 trees (iterations) are enough for this model.
+<br />
+It looks like there 100 trees (iterations) are enough for this model.
 
 ```{r}
 # Create predictions for the test data using the simple linear model
@@ -760,6 +763,8 @@ It's good, but not as good as the linear regression. What if we use all the data
 
 #### Price vs All
 ```{r}
+set.seed(123)
+
 model_rf2 <- randomForest(price ~ ., 
                           train,
                           na.action = na.omit, # remove NAs
@@ -771,8 +776,37 @@ model_rf2
 ```{r}
 plot(model_rf2)
 ```
-I looks like there 100 trees (iterations) are enough for this model too.
+<br />
+It looks like there 100 trees (iterations) are enough for this model too.
 
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_rf2 <- predict(model_rf2, test)
+
+# Create new tibble for test that includes predictions
+# and filters out NAs
+test_rf2 <- test %>% 
+  mutate(pred = predict_rf2) %>% 
+  filter(is.na(pred)==F)
+
+# calculate mean absolute error of model's predictions
+mae_rf2 <- mae(test_rf2$price, test_rf2$pred)
+mae_rf2
+
+# calculate root mean squared error of model's predictions
+rmse_rf2 <- rmse(test_rf2$price, test_rf2$pred)
+rmse_rf2
+
+# calculate r squared
+SSR_rf2 <-sse(test_rf2$price, test_rf2$pred)      # residual sum of squares
+SST_rf2 <-sse(test_rf2$price, mean(test_rf2$price)) # total sum of squares
+Rsq_rf2 <- 1 - SSR_rf2/SST_rf2
+
+# calculate adjusted r squared
+RsqAdj_rf2 <- 1 - (1-Rsq_rf2)*((nrow(test_rf2)-1)/(nrow(test_rf2)-1-1))
+RsqAdj_rf2
+```
+This model out-performs the best linear model (Price vs The 4 C's). The RMSE is `r rmse_lm3` for the linear model, and `r rmse_rf2` for this random forest model. The adjusted R square is `r Rsq_lm3` for the linear model and `r Rsq_rf2` for the random forest model. However, the down side to the random forest model is that it can only use complete data. If there are NAs for x, y, and z, as we saw in the raw data, then this random forest model cannot predict price, and the linear model would have to be used.
 
 
 ## Model Comparison
