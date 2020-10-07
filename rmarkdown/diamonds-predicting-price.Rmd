@@ -6,6 +6,7 @@ output:
   html_document:
     toc: true
     toc_float: true
+    tod_depth: 4
     number_sections: true
 ---
 
@@ -425,10 +426,13 @@ Under development.
 The script below summarizes all the data prep and cleaning steps in previous sections.
 ```{r}
 # Load libraries needed for model exploration
-library(tidyverse)
-library(Metrics)
-library(randomForest)
-library(broom)
+library(tidyverse)      # for data manipulation
+library(Metrics)        # to quickly develop metrics to determine accuracy of models
+library(rpart)          # to create decision tree models
+library(rpart.plot)     # to plot decision tree models
+library(randomForest)   # to create random forest models
+library(gbm)            # to create gradient boosted models
+library(broom)          # to analyze model performance
 
 # This script is to prep the data
 # This way I don't have to re-run everything before this
@@ -721,7 +725,7 @@ RsqAdj_lm6
 There's our answer. It hurts, doesn't help. It looks like the 4 C's are the best predictors. Now let's try a ML model other than linear regression.
 
 ## Random Forest
-#### Price vs 4 C's
+### Price vs 4 C's
 Let's create a random forest model with the 4 C's.
 ```{r}
 set.seed(123)
@@ -761,7 +765,7 @@ RsqAdj_rf1
 ```
 It's good, but not as good as the linear regression. What if we use all the data?
 
-#### Price vs All
+### Price vs All
 ```{r}
 set.seed(123)
 
@@ -807,6 +811,157 @@ RsqAdj_rf2 <- 1 - (1-Rsq_rf2)*((nrow(test_rf2)-1)/(nrow(test_rf2)-1-1))
 RsqAdj_rf2
 ```
 This model out-performs the best linear model (Price vs The 4 C's). The RMSE is `r rmse_lm3` for the linear model, and `r rmse_rf2` for this random forest model. The adjusted R square is `r Rsq_lm3` for the linear model and `r Rsq_rf2` for the random forest model. However, the down side to the random forest model is that it can only use complete data. If there are NAs for x, y, and z, as we saw in the raw data, then this random forest model cannot predict price, and the linear model would have to be used.
+
+
+## Regression Decision Tree
+### Price vs 4 C's
+```{r}
+set.seed(123)
+
+model_dt1 <- rpart(formula = price ~ cut + carat + color + clarity,
+                   data = train,
+                   method = "anova")
+```
+```{r}
+print(model_dt1)
+```
+```{r}
+rpart.plot(x=model_dt1,
+           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
+```
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_dt1 <- predict(model_dt1, test)
+
+# calculate mean absolute error of model's predictions
+mae_dt1 <- mae(test$price, predict_dt1)
+mae_dt1
+
+# calculate root mean squared error of model's predictions
+rmse_dt1 <- rmse(test$price, predict_dt1)
+rmse_dt1
+
+# calculate r squared
+SSR_dt1 <-sse(test$price, predict_dt1)      # residual sum of squares
+SST_dt1 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_dt1 <- 1 - SSR_dt1/SST_dt1
+
+# calculate adjusted r squared
+RsqAdj_dt1 <- 1 - (1-Rsq_dt1)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_dt1
+```
+
+### Price vs All
+```{r}
+set.seed(123)
+
+model_dt2 <- rpart(formula = price ~ .,
+                   data = train,
+                   method = "anova")
+```
+```{r}
+print(model_dt2)
+```
+```{r}
+rpart.plot(x=model_dt2,
+           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
+```
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_dt2 <- predict(model_dt2, test)
+
+# calculate mean absolute error of model's predictions
+mae_dt2 <- mae(test$price, predict_dt2)
+mae_dt2
+
+# calculate root mean squared error of model's predictions
+rmse_dt2 <- rmse(test$price, predict_dt2)
+rmse_dt2
+
+# calculate r squared
+SSR_dt2 <-sse(test$price, predict_dt2)      # residual sum of squares
+SST_dt2 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_dt2 <- 1 - SSR_dt2/SST_dt2
+
+# calculate adjusted r squared
+RsqAdj_dt2 <- 1 - (1-Rsq_dt2)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_dt2
+```
+
+## Gradient Boosting Machine
+### Price vs 4 C's
+```{r}
+set.seed(123)
+
+model_gbm1 <- gbm(formula = price ~ carat + cut + color + clarity,
+                  data = train,
+                  distribution = "gaussian",
+                  n.trees = 1000)
+```
+```{r}
+print(model_gbm1)
+```
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_gbm1 <- predict(model_gbm1, test)
+
+# calculate mean absolute error of model's predictions
+mae_gbm1 <- mae(test$price, predict_gbm1)
+mae_gbm1
+
+# calculate root mean squared error of model's predictions
+rmse_gbm1 <- rmse(test$price, predict_gbm1)
+rmse_gbm1
+
+# calculate r squared
+SSR_gbm1 <-sse(test$price, predict_gbm1)      # residual sum of squares
+SST_gbm1 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_gbm1 <- 1 - SSR_gbm1/SST_gbm1
+
+# calculate adjusted r squared
+RsqAdj_gbm1 <- 1 - (1-Rsq_gbm1)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_gbm1
+```
+
+### Price vs All
+```{r}
+set.seed(123)
+
+model_gbm2 <- gbm(formula = price ~ .,
+                  data = train,
+                  distribution = "gaussian",
+                  n.trees = 1000)
+```
+```{r}
+print(model_gbm2)
+```
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_gbm2 <- predict(model_gbm2, test)
+
+# calculate mean absolute error of model's predictions
+mae_gbm2 <- mae(test$price, predict_gbm2)
+mae_gbm2
+
+# calculate root mean squared error of model's predictions
+rmse_gbm2 <- rmse(test$price, predict_gbm2)
+rmse_gbm2
+
+# calculate r squared
+SSR_gbm2 <-sse(test$price, predict_gbm2)      # residual sum of squares
+SST_gbm2 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_gbm2 <- 1 - SSR_gbm2/SST_gbm2
+
+# calculate adjusted r squared
+RsqAdj_gbm2 <- 1 - (1-Rsq_gbm2)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_gbm2
+```
+
+
+### Price vs All
+
 
 
 ## Model Comparison
