@@ -724,6 +724,83 @@ RsqAdj_lm6
 ```
 There's our answer. It hurts, doesn't help. It looks like the 4 C's are the best predictors. Now let's try a ML model other than linear regression.
 
+## Regression Decision Tree
+### Price vs 4 C's
+```{r}
+set.seed(123)
+
+model_dt1 <- rpart(formula = price ~ cut + carat + color + clarity,
+                   data = train,
+                   method = "anova")
+```
+```{r}
+print(model_dt1)
+```
+```{r}
+rpart.plot(x=model_dt1,
+           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
+```
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_dt1 <- predict(model_dt1, test)
+
+# calculate mean absolute error of model's predictions
+mae_dt1 <- mae(test$price, predict_dt1)
+mae_dt1
+
+# calculate root mean squared error of model's predictions
+rmse_dt1 <- rmse(test$price, predict_dt1)
+rmse_dt1
+
+# calculate r squared
+SSR_dt1 <-sse(test$price, predict_dt1)      # residual sum of squares
+SST_dt1 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_dt1 <- 1 - SSR_dt1/SST_dt1
+
+# calculate adjusted r squared
+RsqAdj_dt1 <- 1 - (1-Rsq_dt1)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_dt1
+```
+
+### Price vs All
+```{r}
+set.seed(123)
+
+model_dt2 <- rpart(formula = price ~ .,
+                   data = train,
+                   method = "anova")
+```
+```{r}
+print(model_dt2)
+```
+```{r}
+rpart.plot(x=model_dt2,
+           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
+```
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_dt2 <- predict(model_dt2, test)
+
+# calculate mean absolute error of model's predictions
+mae_dt2 <- mae(test$price, predict_dt2)
+mae_dt2
+
+# calculate root mean squared error of model's predictions
+rmse_dt2 <- rmse(test$price, predict_dt2)
+rmse_dt2
+
+# calculate r squared
+SSR_dt2 <-sse(test$price, predict_dt2)      # residual sum of squares
+SST_dt2 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_dt2 <- 1 - SSR_dt2/SST_dt2
+
+# calculate adjusted r squared
+RsqAdj_dt2 <- 1 - (1-Rsq_dt2)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_dt2
+```
+
 ## Random Forest
 ### Price vs 4 C's
 Let's create a random forest model with the 4 C's.
@@ -812,84 +889,6 @@ RsqAdj_rf2
 ```
 This model out-performs the best linear model (Price vs The 4 C's). The RMSE is `r rmse_lm3` for the linear model, and `r rmse_rf2` for this random forest model. The adjusted R square is `r Rsq_lm3` for the linear model and `r Rsq_rf2` for the random forest model. However, the down side to the random forest model is that it can only use complete data. If there are NAs for x, y, and z, as we saw in the raw data, then this random forest model cannot predict price, and the linear model would have to be used.
 
-
-## Regression Decision Tree
-### Price vs 4 C's
-```{r}
-set.seed(123)
-
-model_dt1 <- rpart(formula = price ~ cut + carat + color + clarity,
-                   data = train,
-                   method = "anova")
-```
-```{r}
-print(model_dt1)
-```
-```{r}
-rpart.plot(x=model_dt1,
-           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
-```
-
-```{r}
-# Create predictions for the test data using the simple linear model
-predict_dt1 <- predict(model_dt1, test)
-
-# calculate mean absolute error of model's predictions
-mae_dt1 <- mae(test$price, predict_dt1)
-mae_dt1
-
-# calculate root mean squared error of model's predictions
-rmse_dt1 <- rmse(test$price, predict_dt1)
-rmse_dt1
-
-# calculate r squared
-SSR_dt1 <-sse(test$price, predict_dt1)      # residual sum of squares
-SST_dt1 <-sse(test$price, mean(test$price)) # total sum of squares
-Rsq_dt1 <- 1 - SSR_dt1/SST_dt1
-
-# calculate adjusted r squared
-RsqAdj_dt1 <- 1 - (1-Rsq_dt1)*((nrow(test)-1)/(nrow(test)-1-1))
-RsqAdj_dt1
-```
-
-### Price vs All
-```{r}
-set.seed(123)
-
-model_dt2 <- rpart(formula = price ~ .,
-                   data = train,
-                   method = "anova")
-```
-```{r}
-print(model_dt2)
-```
-```{r}
-rpart.plot(x=model_dt2,
-           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
-```
-
-```{r}
-# Create predictions for the test data using the simple linear model
-predict_dt2 <- predict(model_dt2, test)
-
-# calculate mean absolute error of model's predictions
-mae_dt2 <- mae(test$price, predict_dt2)
-mae_dt2
-
-# calculate root mean squared error of model's predictions
-rmse_dt2 <- rmse(test$price, predict_dt2)
-rmse_dt2
-
-# calculate r squared
-SSR_dt2 <-sse(test$price, predict_dt2)      # residual sum of squares
-SST_dt2 <-sse(test$price, mean(test$price)) # total sum of squares
-Rsq_dt2 <- 1 - SSR_dt2/SST_dt2
-
-# calculate adjusted r squared
-RsqAdj_dt2 <- 1 - (1-Rsq_dt2)*((nrow(test)-1)/(nrow(test)-1-1))
-RsqAdj_dt2
-```
-
 ## Gradient Boosting Machine
 ### Price vs 4 C's
 ```{r}
@@ -900,9 +899,18 @@ model_gbm1 <- gbm(formula = price ~ carat + cut + color + clarity,
                   distribution = "gaussian",
                   n.trees = 1000)
 ```
+
+Below shows the relative importance of each predictive variable.
+```{r}
+summary(model_gbm1)
+```
+It looks like carat has a lot more predictive power than clarity, color, and cut.
+
 ```{r}
 print(model_gbm1)
 ```
+Although carat is the best predictor, all four features had a non-zero influence.
+
 ```{r}
 # Create predictions for the test data using the simple linear model
 predict_gbm1 <- predict(model_gbm1, test)
@@ -924,6 +932,7 @@ Rsq_gbm1 <- 1 - SSR_gbm1/SST_gbm1
 RsqAdj_gbm1 <- 1 - (1-Rsq_gbm1)*((nrow(test)-1)/(nrow(test)-1-1))
 RsqAdj_gbm1
 ```
+This isn't too bad, but not as good as the Random Forest model.
 
 ### Price vs All
 ```{r}
@@ -935,8 +944,15 @@ model_gbm2 <- gbm(formula = price ~ .,
                   n.trees = 1000)
 ```
 ```{r}
+summary(model_gbm2)
+```
+y is the best predictor followed by carat, z, and then x. It looks like all the numeric values are the best predictors.
+
+```{r}
 print(model_gbm2)
 ```
+All features have a non-zero influence.
+
 ```{r}
 # Create predictions for the test data using the simple linear model
 predict_gbm2 <- predict(model_gbm2, test)
@@ -958,14 +974,145 @@ Rsq_gbm2 <- 1 - SSR_gbm2/SST_gbm2
 RsqAdj_gbm2 <- 1 - (1-Rsq_gbm2)*((nrow(test)-1)/(nrow(test)-1-1))
 RsqAdj_gbm2
 ```
+This model is only slightly better than the Price vs 4 C's model.
 
+#### Tuning
+The following parameters can be tuned to increase the performance of a GBM model: <br />
+1. n.trees: number of trees <br />
+2. bag.fraction: proportion of observations to be sampled in each tree <br />
+3. n.minobsinnode: minimum number of observations in the trees terminal nodes <br />
+4. interaction.depth: maximum nodes per tree <br />
+5. shrinkage: learning rate <br />
+<br />
+The script below determines the optimal ntree based on Out-of-Bag (OOB) error.
+```{r}
+ntree_opt_oob <- gbm.perf(model_gbm2, method = "OOB", oobag.curve = T)
+ntree_opt_oob
+```
+The script below determines the optimal ntree based on the Cross Validation (CV) error with 5 cross validation folds.
+```{r}
+set.seed(123)
 
-### Price vs All
+model_gbm2_cv <- gbm(formula = price ~ .,
+                  data = train,
+                  distribution = "gaussian",
+                  n.trees = 1000,
+                  cv.folds = 5)
+
+ntree_opt_cv <- gbm.perf(model_gbm2_cv, method = "cv")
+ntree_opt_cv
+```
+
+Now time to compare the predictions between the two options for ntree.
+```{r}
+pred_oob <- predict(model_gbm2, test, n.trees = ntree_opt_oob)
+rmse(test$price, pred_oob)
+```
+
+```{r}
+pred_cv <- predict(model_gbm2, test, n.trees = ntree_opt_cv)
+rmse(test$price, pred_cv)
+```
+Based on the cross validation error, the optimal number of trees when predicting should be `r pred_cv`. However, this RMSE is less than the RMSE of the original model. Therfore, this ntree should be left as is.
+
 
 
 
 ## Model Comparison
-Under development.
+The script below combines combines all the metrics into one tibble.
+```{r}
+model_compare <- tibble(
+  ModelName = c(
+    "model_dt1",
+    "model_dt2",
+    "model_gbm1",
+    "model_gbm2",
+    "model_lm1",
+    "model_lm2",
+    "model_lm3",
+    "model_lm4",
+    "model_lm5",
+    "model_lm6",
+    "model_rf1",
+    "model_rf2"
+  ),
+  ModelType = c(
+    "Decision Tree",
+    "Decision Tree",
+    "Gradient Boosting Machine",
+    "Gradient Boosting Machine",
+    "Linear Regression",
+    "Linear Regression",
+    "Linear Regression",
+    "Linear Regression",
+    "Linear Regression",
+    "Linear Regression",
+    "Random Forest",
+    "Random Forest"
+  ),
+  Predictors = c(
+    formula(model_dt1)[[3]],
+    formula(model_dt2)[[3]],
+    formula(model_gbm1)[[3]],
+    formula(model_gbm2)[[3]],
+    formula(model_lm1)[[3]],
+    formula(model_lm2)[[3]],
+    formula(model_lm3)[[3]],
+    formula(model_lm4)[[3]],
+    formula(model_lm5)[[3]],
+    formula(model_lm6)[[3]],
+    formula(model_rf1)[[3]],
+    formula(model_rf)[[3]]
+  ),
+  RMSE = c(
+    rmse_dt1,
+    rmse_dt2,
+    rmse_gbm1,
+    rmse_gbm2,
+    rmse_lm1,
+    rmse_lm2,
+    rmse_lm3,
+    rmse_lm4,
+    rmse_lm5,
+    rmse_lm6,
+    rmse_rf1,
+    rmse_rf2
+  ),
+  MAE = c(
+    mae_dt1,
+    mae_dt2,
+    mae_gbm1,
+    mae_gbm2,
+    mae_lm1,
+    mae_lm2,
+    mae_lm3,
+    mae_lm4,
+    mae_lm5,
+    mae_lm6,
+    mae_rf1,
+    mae_rf2
+  ),
+  AdjRSquare = c(
+    RsqAdj_dt1,
+    RsqAdj_dt2,
+    RsqAdj_gbm1,
+    RsqAdj_gbm2,
+    RsqAdj_lm1,
+    RsqAdj_lm2,
+    RsqAdj_lm3,
+    RsqAdj_lm4,
+    RsqAdj_lm5,
+    RsqAdj_lm6,
+    RsqAdj_rf1,
+    RsqAdj_rf2
+  )
+) %>% 
+  arrange(RMSE, MAE, AdjRSquare)
+
+head(model_compare, n = nrow(model_compare))
+```
+The best model is model is `r model_compare$ModelName[1]`, a `r model_compare$ModelType[1]` model using the formula price vs `r formula(model_compare$ModelName[1])[[3]]`. It has an RMSE of `r model_compare$RMSE[1]`, a MAE of `r model_compare$MAE[1]`, and an adjusted R square of `r model_compare$AdjRSquare[1]`.
+
 
 # Discussion
 Throughout this analysis some assumptions and data cleaning steps have been made. These decisions will impact how each predictive model will perform. A sensitivity analysis is recommended for the following data cleaning issues:
