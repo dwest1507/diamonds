@@ -801,6 +801,81 @@ RsqAdj_dt2 <- 1 - (1-Rsq_dt2)*((nrow(test)-1)/(nrow(test)-1-1))
 RsqAdj_dt2
 ```
 
+#### Tuning CP to 0.001
+Changing the complexity parameter from 0.01 to 0.001.Any split that does not decrease the overall lack of fit by a factor of cp is not attempted. For instance, with anova splitting, this means that the overall R-squared must increase by cp at each step.
+```{r}
+set.seed(123)
+
+model_dt3 <- rpart(formula = price ~ .,
+                   data = train,
+                   method = "anova",
+                   control = rpart.control(cp=0.001))
+
+
+```
+
+```{r}
+rpart.plot(x=model_dt3,
+           yesno = 2, type = 0, extra = 0) # personal preference on how the plot is displayed
+```
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_dt3 <- predict(model_dt3, test)
+
+# calculate mean absolute error of model's predictions
+mae_dt3 <- mae(test$price, predict_dt3)
+mae_dt3
+
+# calculate root mean squared error of model's predictions
+rmse_dt3 <- rmse(test$price, predict_dt3)
+rmse_dt3
+
+# calculate r squared
+SSR_dt3 <-sse(test$price, predict_dt3)      # residual sum of squares
+SST_dt3 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_dt3 <- 1 - SSR_dt3/SST_dt3
+
+# calculate adjusted r squared
+RsqAdj_dt3 <- 1 - (1-Rsq_dt3)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_dt3
+```
+
+#### Tuning CP to 0.000001
+Now let's try an even lower complexity parameter that makes a decision tree too complex to plot.
+```{r}
+set.seed(123)
+
+model_dt4 <- rpart(formula = price ~ .,
+                   data = train,
+                   method = "anova",
+                   control = rpart.control(cp=0.000001))
+
+
+```
+
+```{r}
+# Create predictions for the test data using the simple linear model
+predict_dt4 <- predict(model_dt4, test)
+
+# calculate mean absolute error of model's predictions
+mae_dt4 <- mae(test$price, predict_dt4)
+mae_dt4
+
+# calculate root mean squared error of model's predictions
+rmse_dt4 <- rmse(test$price, predict_dt4)
+rmse_dt4
+
+# calculate r squared
+SSR_dt4 <-sse(test$price, predict_dt4)      # residual sum of squares
+SST_dt4 <-sse(test$price, mean(test$price)) # total sum of squares
+Rsq_dt4 <- 1 - SSR_dt4/SST_dt4
+
+# calculate adjusted r squared
+RsqAdj_dt4 <- 1 - (1-Rsq_dt4)*((nrow(test)-1)/(nrow(test)-1-1))
+RsqAdj_dt4
+```
+
 ## Random Forest
 ### Price vs 4 C's
 Let's create a random forest model with the 4 C's.
@@ -1025,6 +1100,8 @@ model_compare <- tibble(
   ModelName = c(
     "model_dt1",
     "model_dt2",
+    "model_dt3",
+    "model_dt4",
     "model_gbm1",
     "model_gbm2",
     "model_lm1",
@@ -1039,6 +1116,8 @@ model_compare <- tibble(
   ModelType = c(
     "Decision Tree",
     "Decision Tree",
+    "Decision Tree",
+    "Decision Tree",
     "Gradient Boosting Machine",
     "Gradient Boosting Machine",
     "Linear Regression",
@@ -1050,23 +1129,11 @@ model_compare <- tibble(
     "Random Forest",
     "Random Forest"
   ),
-  Predictors = c(
-    formula(model_dt1)[[3]],
-    formula(model_dt2)[[3]],
-    formula(model_gbm1)[[3]],
-    formula(model_gbm2)[[3]],
-    formula(model_lm1)[[3]],
-    formula(model_lm2)[[3]],
-    formula(model_lm3)[[3]],
-    formula(model_lm4)[[3]],
-    formula(model_lm5)[[3]],
-    formula(model_lm6)[[3]],
-    formula(model_rf1)[[3]],
-    formula(model_rf)[[3]]
-  ),
   RMSE = c(
     rmse_dt1,
     rmse_dt2,
+    rmse_dt3,
+    rmse_dt4,
     rmse_gbm1,
     rmse_gbm2,
     rmse_lm1,
@@ -1081,6 +1148,8 @@ model_compare <- tibble(
   MAE = c(
     mae_dt1,
     mae_dt2,
+    mae_dt3,
+    mae_dt4,
     mae_gbm1,
     mae_gbm2,
     mae_lm1,
@@ -1095,6 +1164,8 @@ model_compare <- tibble(
   AdjRSquare = c(
     RsqAdj_dt1,
     RsqAdj_dt2,
+    RsqAdj_dt3,
+    RsqAdj_dt4,
     RsqAdj_gbm1,
     RsqAdj_gbm2,
     RsqAdj_lm1,
@@ -1107,11 +1178,13 @@ model_compare <- tibble(
     RsqAdj_rf2
   )
 ) %>% 
-  arrange(RMSE, MAE, AdjRSquare)
+  arrange(RMSE, MAE, AdjRSquare) %>% 
+  mutate(Rank = c(1:nrow(.))) %>% 
+  select(Rank, everything())
 
 head(model_compare, n = nrow(model_compare))
 ```
-The best model is model is `r model_compare$ModelName[1]`, a `r model_compare$ModelType[1]` model using the formula price vs `r formula(model_compare$ModelName[1])[[3]]`. It has an RMSE of `r model_compare$RMSE[1]`, a MAE of `r model_compare$MAE[1]`, and an adjusted R square of `r model_compare$AdjRSquare[1]`.
+The best model is model is `r model_compare$ModelName[[1]]`, a `r model_compare$ModelType[[1]]` model using the formula price vs `r as.character(formula(model_compare$ModelName[1])[3])`. It has an RMSE of `r model_compare$RMSE[1]`, a MAE of `r model_compare$MAE[1]`, and an adjusted R square of `r model_compare$AdjRSquare[1]`.
 
 
 # Discussion
